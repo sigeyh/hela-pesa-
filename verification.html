@@ -41,7 +41,7 @@
     // Initiate Payhero STK push payment
     async function payNow() {
       // Gather required data
-      const amount = parseInt(document.getElementById('amount').textContent.replace(/[^0-9]/g, ''));
+      const amount = parseInt(document.getElementById('fee').textContent.replace(/[^0-9]/g, '').trim());
       const phone = document.getElementById('phone').textContent.trim();
       const accountId = "6902"; // Payhero Account ID
       const reference = `HelaPesa-${Date.now()}`;
