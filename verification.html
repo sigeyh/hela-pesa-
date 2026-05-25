@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Verification - Hela Pesa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gradient-to-br from-red-700 via-red-600 to-red-500 text-white min-h-screen px-4 py-6 font-sans">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-6">
+    <img src="zashlogo.png" alt="Hela Pesa Logo" class="w-12 h-12 rounded-full">
+    <h1 class="text-2xl font-bold">Hela Pesa</h1>
+  </div>
+
+  <!-- Loan Summary -->
+  <div class="bg-white bg-opacity-10 p-4 rounded-xl mb-6">
+    <h2 class="text-xl font-semibold mb-2">Loan Summary</h2>
+    <p><strong>Loan Amount:</strong> Ksh <span id="amount">-</span></p>
+    <p><strong>Service Fee:</strong> Ksh <span id="fee">-</span></p>
+    <p><strong>Request Date:</strong> <span id="requestDate">-</span></p>
+    <p><strong>Due Date:</strong> <span id="dueDate">-</span></p>
+    <p><strong>M-Pesa Number:</strong> <span id="phone">-</span></p>
+  </div>
+
+  <!-- How to Pay -->
+  <div class="bg-white bg-opacity-10 p-4 rounded-xl mb-6">
+    <h2 class="text-xl font-semibold mb-3">📲 How to Pay</h2>
+    <div class="flex flex-col items-center space-y-4">
+      <button onclick="payNow()" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition">Pay via M-Pesa (STK Push)</button>
+    </div>
+
+
+  <!-- Confirmation Message -->
+  <div class="bg-white bg-opacity-10 p-4 rounded-xl mb-6">
+    <label for="mpesaMessage" class="block mb-2 font-medium">Paste your full M-Pesa confirmation message</label>
+    <textarea id="mpesaMessage" placeholder="e.g. HAKIKA R PROVISION Ksh XX received from..."
+      class="w-full p-3 rounded text-black h-32" required></textarea>
+  </div>
+
+  <!-- Submit Button -->
+  <button onclick="submit()"
+    class="w-full bg-yellow-400 text-black font-bold py-3 rounded-full hover:bg-yellow-300 shadow-lg">Submit</button>
+
+  <script>
+    const data = JSON.parse(localStorage.getItem('loanRequest')) || {};
+
+    document.getElementById('amount').textContent = data.amount?.toLocaleString() || '-';
+    document.getElementById('fee').textContent = data.serviceFee?.toLocaleString() || '-';
+    document.getElementById('requestDate').textContent = data.requestDate || '-';
+    document.getElementById('dueDate').textContent = data.dueDate || '-';
+    document.getElementById('phone').textContent = data.phone || '-';
+    document.getElementById('payAmount').textContent = data.serviceFee?.toLocaleString() || '-';
+
+    // Initiate Payhero STK push payment
+    async function payNow() {
+      // Gather required data
+      const amount = parseInt(document.getElementById('payAmount').textContent.replace(/[^0-9]/g, ''));
+      const phone = document.getElementById('phone').textContent.trim();
+      const accountId = "6902"; // Payhero Account ID
+      const reference = `HelaPesa-${Date.now()}`;
+
+      const payload = {
+        amount: amount,
+        phone: phone,
+        accountId: accountId,
+        reference: reference
+      };
+
+      try {
+        const response = await fetch('https://backend.payhero.co.ke/api/v2/payments', {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic aFlERUtyU1A3bk9BTU9UYVV4b0E6VE5VRlN5SVFLaUl0Q3E5YTg5N2RrT2JiRWFRNmk2TVNRZnJPTEhtcg==' // token from user
+          },
+          body: JSON.stringify({
+            amount: amount,
+            phone_number: phone,
+            channel_id: parseInt('6770'), // correct channel ID
+            provider: 'm-pesa',
+            external_reference: `HelaPesa-${Date.now()}`,
+            callback_url: window.location.origin + '/payhero-callback.html'
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error(`Payhero request failed: ${response.status} ${err}`);
+        }
+
+        const result = await response.json();
+        // Assuming result contains a field `status` indicating success
+        if (result.status && result.status.toLowerCase() === 'success') {
+          alert('Payment request sent successfully!');
+          // Optionally redirect to success page
+          window.location.href = "success.html";
+        } else {
+          alert('Payment request completed but returned unexpected status. Please check your account.');
+        }
+      } catch (error) {
+        console.error('Payhero STK push error:', error);
+        alert('Failed to initiate payment. Please try again later.');
+      }
+    }
+
+    function submit() {
+      const msg = document.getElementById("mpesaMessage").value.trim();
+      if (!msg) {
+        alert("Please paste the M-Pesa confirmation message.");
+        return;
+      }
+
+      try {
+        // Store confirmation message to localStorage
+        localStorage.setItem('confirmationMessage', msg);
+        window.location.href = "success.html";
+      } catch (error) {
+        console.error("Error saving confirmation message:", error);
+        alert("There was an error saving your confirmation. Please try again.");
+      }
+    }
+  </script>
+</body>
+
+</html>
